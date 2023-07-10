@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"golang.design/x/clipboard"
@@ -16,6 +17,21 @@ import (
 var memes []string
 
 func main() {
+	if os.Geteuid() != 0 {
+		cmd := exec.Command("sudo", os.Args[0])
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		err := cmd.Run()
+		if err != nil {
+			fmt.Println("Failed to re-execute with root privileges:", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	}
+
 	go run()
 
 	CatchErr(clipboard.Init())
@@ -28,7 +44,11 @@ func main() {
 
 func run() {
 	k, err := keylogger.New(keylogger.FindKeyboardDevice())
-	CatchErr(err)
+
+	if err != nil {
+		fmt.Println("Must be run as root")
+		os.Exit(1)
+	}
 
 	var history []uint16
 
